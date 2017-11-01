@@ -25,12 +25,12 @@ if (args.output):
     output_file_path = args.output
 
 # First resize by X dimension
-result = resize(img, args.nx)
+result = resize(img, args.xpixels)
 
 # Then resize by Y dimension
 # This can be done by rotating by 90 degrees and repeating the resize algo
-rotate_result = ndimage.rotate(result, 90)
-result = resize(img, args.nx)
+result = ndimage.rotate(result, 90)
+result = resize(result, args.ypixels)
 
 # Rotate back to original orientation
 result = ndimage.rotate(result, 270)

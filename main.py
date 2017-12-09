@@ -19,6 +19,7 @@ parser.add_argument("-o", "--output", required=False, help="(Optional) Output im
 parser.add_argument("-nx", "--xpixels", required=True, help="Number of pixels to reduce in the X-dimension")
 parser.add_argument("-ny", "--ypixels", required=True, help="Number of pixels to reduce in the Y-dimension")
 parser.add_argument("-s", "--show", required=False, help="show the output image compared to the original", action="store_true")
+parser.add_argument("-a", "--algo", required=False, help="Which algorithm to use: greedy, random, dijkstra")
 
 args = parser.parse_args()
 
@@ -30,17 +31,21 @@ output_file_path = "out_" + args.img
 if args.output:
     output_file_path = args.output
 
+algo = "greedy"
+if args.algo:
+    algo = args.algo
+
 # Cast command line args to string
 nx = int(args.xpixels)
 ny = int(args.ypixels)
 
 # First resize by X dimension
-result = resize(img, nx)
+result = resize(img, nx, algo)
 
 # Then resize by Y dimension
 # This can be done by rotating by 90 degrees and repeating the resize algo
 result = ndimage.rotate(result, 90)
-result = resize(result, ny)
+result = resize(result, ny, algo)
 
 # Rotate back to original orientation
 result = ndimage.rotate(result, 270)

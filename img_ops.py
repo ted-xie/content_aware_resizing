@@ -1,9 +1,11 @@
 import numpy as np
 from utils import CLAMP_RANGE
 import random
+from scipy import ndimage, misc
 
 def resize(img, amount, algo="greedy"):
     img_tmp = np.copy(img)
+    gradient = ndimage.gaussian_gradient_magnitude(img, sigma=5)
     MAX_X = np.shape(img)[1]
     MAX_Y = np.shape(img)[0]
     random.seed(1234)
@@ -11,14 +13,12 @@ def resize(img, amount, algo="greedy"):
     if amount == 0: return img_tmp
     if amount > 0:
         for i in range(amount):
-            # find the min cut path
+            # find the min cut path on the gradient
             path = None
             if algo == "greedy":
-                path = min_cut_greedy(img_tmp, MAX_X-i, MAX_Y)
+                path = min_cut_greedy(gradient, MAX_X-i, MAX_Y)
             elif algo == "random":
-                path = min_cut_random(img_tmp, MAX_X-i, MAX_Y)
-            elif algo == "dijkstra":
-                path = min_cut_dijkstra(img_tmp)
+                path = min_cut_random(gradient, MAX_X-i, MAX_Y)
             # stitch 1 pixel at a time
             img_tmp2 = np.zeros((MAX_Y, MAX_X-i-1))
             for node in path:
@@ -31,28 +31,53 @@ def resize(img, amount, algo="greedy"):
             img_tmp = img_tmp2
     return img_tmp[0:MAX_Y, 0:MAX_X-amount]
 
-def generate_greedy_paths(x, y, MAX_X, MAX_Y):
-    return [] 
-
 def min_cut_greedy(img, MAX_X, MAX_Y):
-    costs = [0.0] * len(paths)
-    paths = generate_greedy_paths(MAX_X, MAX_Y)
+    costs = np.zeros(MAX_X)
+    paths = [None] * MAX_X
 
-    for path in paths:
-        for node in paths:
-            x = node[1]
-            y = node[0]
-            costs[i] += img[y, x]
+    # Initialize paths
+    for x in range(MAX_X):
+        paths[x] = [(0, x)]
 
-    # find minimum cost path
-    min_cost = costs[0]
-    min_path = None
-    for i in range(len(costs)):
-        if costs[i] < min_cost:
-            min_cost = costs[i]
-            min_path = paths[i]
+    for x in range(MAX_X):
+        for y in range(1, MAX_Y):
+            last_x = paths[x][y-1][1]
+            CTR_x = CLAMP_RANGE(x, 0, MAX_X-1)
+            CTR_y = CLAMP_RANGE(y, 0, MAX_Y-1)
+            L_x = CLAMP_RANGE(x-1, 0, MAX_X-1)
+            L_y = CLAMP_RANGE(y, 0, MAX_Y-1)
+            R_x = CLAMP_RANGE(x+1, 0, MAX_X-1)
+            R_y = CLAMP_RANGE(y, 0, MAX_Y-1)
 
-    return min_path
+            CTR = img[CTR_y, CTR_x]
+            L = img[L_y, L_x]
+            R = img[R_y, R_x]
+
+            candidates_val = [L, CTR, R]
+            candidates_x = [L_x, CTR_x, R_x]
+            candidates_y = [L_y, CTR_y, R_y]
+
+            min_cost = candidates_val[0]
+            min_idx = 0
+            for i in range(3):
+                if candidates_val[i] < min_cost:
+                    min_cost = candidates_val[i]
+                    min_idx = i
+
+            min_x = candidates_x[min_idx]
+            min_y = candidates_y[min_idx]
+
+            costs[x] += min_cost
+            paths[x].append((min_y, min_x))
+
+    # find minimum-cost path
+    best_path = paths[0]
+    min_path_cost = costs[0]
+    for i in range(len(paths)):
+        if costs[i] < min_path_cost:
+            min_path_cost = costs[i]
+            best_path = paths[i]
+    return best_path
 
 def min_cut_greedy_old(img, MAX_X, MAX_Y):
     costs = [0] * MAX_X

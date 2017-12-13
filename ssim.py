@@ -35,10 +35,11 @@ file2 = sys.argv[2]
 
 img1 = color.rgb2gray(io.imread(file1, mode="RGB"))
 img2 = color.rgb2gray(io.imread(file2, mode="RGB"))
+img1 = img1.astype("float")
+img2 = img2.astype("float")
 
 # need to make sure image dimensions match
-orig_shape = img1.shape
-img2 = skresize(img2, img1.shape, mode="reflect")
+img1 = skresize(img1, img2.shape, mode="reflect")
 
 def mse(x, y):
     return np.linalg.norm(x - y)
